@@ -3,6 +3,9 @@ import type { PKCESession } from "../helper/types";
 
 import { generateState, generateCodeChallenge, generateCodeVerifier } from "../helper/crypt/pkceHelper";
 import TestPlugin from "../TestPlugin";
+import { PasswordSetupModal } from "../modals/PasswordSetupModal";
+import { aesGcmDecrypt, aesGcmEncrypt } from "../helper/crypt/aes";
+import { setRefreshToken, setAccessToken, setExpirationTime } from "../helper/storage/localStorageHelper";
 
 
 const PUBLIC_CLIENT_ID = '290682291033-qngpea2175rjca11gb5tj94mqaosd19m.apps.googleusercontent.com'
@@ -29,13 +32,30 @@ export const pkceFlowLocalStart = async () => {
     authUrl += `&code_challenge=${codeChallenge}`;
     authUrl += `&access_type=offline`;
 
-    session = {
-        state,
-        codeVerifier,
-    }
+    if (plugin.settings.encryptToken) {
+        new PasswordSetupModal(plugin.app, (enteredPassword: string) => {
+            if (!enteredPassword || enteredPassword == "") return;
 
-    window.location.href = authUrl
-    console.log(`Please visit this URL to authorize the application: ${authUrl}`);
+            session = {
+                state,
+                codeVerifier,
+                password: enteredPassword
+            }
+
+            window.location.href = authUrl
+            console.log(`Please visit this URL to authorize the application: ${authUrl}`);
+
+        }).open();
+    } else {
+
+        session = {
+            state,
+            codeVerifier,
+        }
+
+        window.location.href = authUrl
+        console.log(`Please visit this URL to authorize the application: ${authUrl}`);
+    }
 }
 
 
@@ -67,7 +87,12 @@ export async function pkceFlowLocalEnd(code: string, state: string) {
 
     const { access_token, refresh_token, expires_in } = tokenRequest.json;
 
-    console.log(`Access Token: ${access_token}`);
+    const encryptedAccessToken = await aesGcmEncrypt(access_token, session.password);
+    const encryptedRefreshToken = await aesGcmEncrypt(refresh_token, session.password);
+
+    setRefreshToken(encryptedRefreshToken);
+    setAccessToken(encryptedAccessToken);
+    setExpirationTime(expires_in)
 
     session = undefined;
 

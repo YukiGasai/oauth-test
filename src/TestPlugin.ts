@@ -2,7 +2,8 @@ import { Plugin } from 'obsidian';
 import { DEFAULT_SETTINGS, SettingsView } from '../src/views/SettingsView';
 import type { TestPluginSettings } from './helper/types';
 import { pkceFlowLocalEnd, pkceFlowLocalStart } from '../src/oauth/pkceFlow';
-
+import { clearTokens, isLoggedIn } from './helper/storage/localStorageHelper';
+import { PasswordEnterModal } from './modals/PasswordEnterModal';
 
 export default class TesPlugin extends Plugin {
 	private static instance: TesPlugin;
@@ -13,7 +14,7 @@ export default class TesPlugin extends Plugin {
 
 
 	settings: TestPluginSettings;
-
+	private password: string;
 	async onload() {
 		TesPlugin.instance = this;
 
@@ -27,11 +28,33 @@ export default class TesPlugin extends Plugin {
 			}
 		});
 
+		this.addCommand({
+			id: 'testplugin-logout-pkce',
+			name: 'TestPlugin Logout PKCE',
+			checkCallback: (checking: boolean) => {
+				const canRun = isLoggedIn();
+				if (checking) {
+					return canRun;
+				}
+				if (!canRun) {
+					return;
+				}
+				clearTokens();
+			}
+		});
 
 		this.addCommand({
 			id: 'testplugin-login-pkce',
 			name: 'TestPlugin Login PKCE',
-			callback: () => {
+			checkCallback: (checking: boolean) => {
+				const canRun = !isLoggedIn();
+				if (checking) {
+					return canRun;
+				}
+				if (!canRun) {
+					return;
+				}
+
 				pkceFlowLocalStart();
 			}
 		});
@@ -44,6 +67,14 @@ export default class TesPlugin extends Plugin {
 				pkceFlowLocalEnd(req.code, req.state)
 			}
 		});
+
+		if (isLoggedIn()) {
+			new PasswordEnterModal(this.app, (enteredPassword: string) => {
+				if (!enteredPassword || enteredPassword == "") return;
+				TesPlugin.getInstance().password = enteredPassword;
+			}).open();
+		}
+
 	}
 
 	onunload() {

@@ -1,7 +1,18 @@
+import { aesGcmDecrypt } from "../crypt/aes";
+
 const GOOGLE_CALENDAR_PLUGIN_REFRESH_KEY = 'google_calendar_plugin_refresh_key';
 const GOOGLE_CALENDAR_PLUGIN_ACCESS_KEY = 'google_calendar_plugin_access_key';
 const GOOGLE_CALENDAR_PLUGIN_EXPIRATION_KEY = 'google_calendar_plugin_expiration_key';
 
+let tokenPassword = null;
+
+export const setTokenPassword = (password: string) => {
+	tokenPassword = password;
+}
+
+export const isLoggedIn = (): boolean => {
+	return window.localStorage.getItem(GOOGLE_CALENDAR_PLUGIN_REFRESH_KEY) != "";
+}
 
 //===================
 //GETTER
@@ -11,16 +22,24 @@ const GOOGLE_CALENDAR_PLUGIN_EXPIRATION_KEY = 'google_calendar_plugin_expiration
  * getAccessToken from LocalStorage
  * @returns googleAccessToken
  */
-export const getAccessToken = (): string => {
-	return window.localStorage.getItem(GOOGLE_CALENDAR_PLUGIN_ACCESS_KEY) ?? "";
+export const getAccessToken = async (): Promise<string> => {
+	if (tokenPassword) {
+		return (await aesGcmDecrypt(window.localStorage.getItem(GOOGLE_CALENDAR_PLUGIN_ACCESS_KEY) ?? "", tokenPassword));
+	} else {
+		return window.localStorage.getItem(GOOGLE_CALENDAR_PLUGIN_ACCESS_KEY) ?? "";
+	}
 };
 
 /**
  * getRefreshToken from LocalStorage
  * @returns googleRefreshToken
  */
-export const getRefreshToken = (): string => {
-	return window.localStorage.getItem(GOOGLE_CALENDAR_PLUGIN_REFRESH_KEY) ?? "";
+export const getRefreshToken = async (): Promise<string> => {
+	if (tokenPassword) {
+		return (await aesGcmDecrypt(window.localStorage.getItem(GOOGLE_CALENDAR_PLUGIN_REFRESH_KEY) ?? "", tokenPassword));
+	} else {
+		return window.localStorage.getItem(GOOGLE_CALENDAR_PLUGIN_REFRESH_KEY) ?? "";
+	}
 };
 
 /**
@@ -69,3 +88,13 @@ export const setExpirationTime = (googleExpirationTime: number): void => {
 		googleExpirationTime + ""
 	);
 };
+
+// ===================
+// CLEAR
+// ===================
+
+export const clearTokens = (): void => {
+	window.localStorage.setItem(GOOGLE_CALENDAR_PLUGIN_ACCESS_KEY, "");
+	window.localStorage.setItem(GOOGLE_CALENDAR_PLUGIN_REFRESH_KEY, "");
+	window.localStorage.setItem(GOOGLE_CALENDAR_PLUGIN_EXPIRATION_KEY, "");
+}

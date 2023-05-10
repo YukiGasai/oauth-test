@@ -1,5 +1,5 @@
 export interface TestPluginSettings {
-	encryptToken: boolean,
+    encryptToken: boolean,
     useCustomClient: boolean,
     googleClientId: string,
     googleClientSecret: string,
@@ -9,4 +9,5 @@ export interface TestPluginSettings {
 export interface PKCESession {
     state: string;
     codeVerifier: string;
+    password?: string;
 }
