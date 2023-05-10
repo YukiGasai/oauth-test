@@ -1,8 +1,14 @@
 import { App, PluginSettingTab, Setting } from "obsidian";
-import TestPlugin from "../TestPlugin";
+import type TestPlugin from "../TestPlugin";
+import type { TestPluginSettings } from "../helper/types";
+import { setAccessToken, setExpirationTime, setRefreshToken } from "../helper/storage/localStorageHelper";
 
 export const DEFAULT_SETTINGS: TestPluginSettings = {
-	mySetting: 'default'
+	encryptToken: false,
+	useCustomClient: false,
+	googleClientId: '',
+	googleClientSecret: '',
+	googleOAuthServer: 'https://google-auth-obsidian-redirect.vercel.app',
 }
 
 export class SettingsView extends PluginSettingTab {
@@ -14,22 +20,83 @@ export class SettingsView extends PluginSettingTab {
 	}
 
 	display(): void {
-		const {containerEl} = this;
+		const { containerEl } = this;
 
 		containerEl.empty();
 
-		containerEl.createEl('h2', {text: 'Settings for my awesome plugin.'});
+		containerEl.createEl('h2', { text: 'Settings for OAuth test plugin.' });
 
 		new Setting(containerEl)
-			.setName('Setting #1')
-			.setDesc('It\'s a secret')
-			.addText(text => text
-				.setPlaceholder('Enter your secret')
-				.setValue(this.plugin.settings.mySetting)
-				.onChange(async (value) => {
-					console.log('Secret: ' + value);
-					this.plugin.settings.mySetting = value;
+			.setName("Use own authentication client")
+			.setDesc("Please create your own client.")
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.useCustomClient)
+					.onChange(async (value) => {
+						setRefreshToken("");
+						setAccessToken("");
+						setExpirationTime(0);
+						this.plugin.settings.useCustomClient = value;
+						await this.plugin.saveSettings();
+						this.display();
+					})
+			);
+
+		if (this.plugin.settings.useCustomClient) {
+
+			new Setting(containerEl)
+				.setName("ClientId")
+				.setDesc("Google client id")
+				.setClass("SubSettings")
+				.addText((text) =>
+					text
+						.setPlaceholder("Enter your client id")
+						.setValue(this.plugin.settings.googleClientId)
+						.onChange(async (value) => {
+							this.plugin.settings.googleClientId = value.trim();
+							await this.plugin.saveSettings();
+						})
+				);
+
+			new Setting(containerEl)
+				.setName("ClientSecret")
+				.setDesc("Google client secret")
+				.setClass("SubSettings")
+				.addText((text) =>
+					text
+						.setPlaceholder("Enter your client secret")
+						.setValue(this.plugin.settings.googleClientSecret)
+						.onChange(async (value) => {
+							this.plugin.settings.googleClientSecret = value.trim();
+							await this.plugin.saveSettings();
+						})
+				);
+		} else {
+
+			new Setting(containerEl)
+				.setName("Server url")
+				.setDesc("The url to the server where the oauth takes place")
+				.setClass("SubSettings")
+				.addText(text => {
+					text
+						.setValue(this.plugin.settings.googleOAuthServer)
+						.onChange(async (value) => {
+							this.plugin.settings.googleOAuthServer = value.trim();
+							await this.plugin.saveSettings();
+						})
+				})
+
+		}
+
+		new Setting(containerEl)
+			.setName('Protect google Login')
+			.setDesc('This will encrypt the google login data with a password you set.')
+			.addToggle(toggle => {
+				toggle.setValue(this.plugin.settings.encryptToken)
+				toggle.onChange(async (value) => {
+					this.plugin.settings.encryptToken = value;
 					await this.plugin.saveSettings();
-				}));
+				});
+			});
 	}
 }
