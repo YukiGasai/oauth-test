@@ -1,0 +1,3 @@
+interface TestPluginSettings {
+	mySetting: string;
+}
