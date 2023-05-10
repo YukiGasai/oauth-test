@@ -65,8 +65,6 @@ export async function pkceFlowLocalEnd(code: string, state: string) {
     })
 
 
-
-
     const { access_token, refresh_token, expires_in } = tokenRequest.json;
 
     console.log(`Access Token: ${access_token}`);
