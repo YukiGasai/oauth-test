@@ -1,15 +1,24 @@
 import { Plugin } from 'obsidian';
 import { DEFAULT_SETTINGS, SettingsView } from '../src/views/SettingsView';
+import type { TestPluginSettings } from './helper/types';
+import { pkceFlowLocalStart } from '../src/oauth/pkceFlow';
 
 
 export default class TesPlugin extends Plugin {
+	private static instance: TesPlugin;
+
+	public static getInstance(): TesPlugin {
+		return TesPlugin.instance;
+	}
+
+
 	settings: TestPluginSettings;
 
 	async onload() {
+		TesPlugin.instance = this;
+
 		await this.loadSettings();
 
-
-		// This adds a simple command that can be triggered anywhere
 		this.addCommand({
 			id: 'testplugin-sample-command',
 			name: 'TestPlugin Sample Command',
@@ -17,8 +26,16 @@ export default class TesPlugin extends Plugin {
 				console.log("Hello world!");
 			}
 		});
+
+		
+		this.addCommand({
+			id: 'testplugin-login-pkce',
+			name: 'TestPlugin Login PKCE',
+			callback: () => {			
+				pkceFlowLocalStart();
+			}
+		});
 	
-		// This adds a settings tab so the user can configure various aspects of the plugin
 		this.addSettingTab(new SettingsView(this.app, this));
 	}
 
