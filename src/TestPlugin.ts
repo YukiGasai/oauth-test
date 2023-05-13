@@ -4,6 +4,7 @@ import type { TestPluginSettings } from './helper/types';
 import { pkceFlowLocalEnd, pkceFlowLocalStart } from '../src/oauth/pkceFlow';
 import { clearTokens, isLoggedIn } from './helper/storage/localStorageHelper';
 import { PasswordEnterModal } from './modals/PasswordEnterModal';
+import { pkceFlowServerEnd, pkceFlowServerStart } from './oauth/pkceServerFlow';
 
 export default class TesPlugin extends Plugin {
 	private static instance: TesPlugin;
@@ -29,8 +30,8 @@ export default class TesPlugin extends Plugin {
 		});
 
 		this.addCommand({
-			id: 'testplugin-logout-pkce',
-			name: 'TestPlugin Logout PKCE',
+			id: 'testplugin-logout',
+			name: 'TestPlugin Logout',
 			checkCallback: (checking: boolean) => {
 				const canRun = isLoggedIn();
 				if (checking) {
@@ -44,8 +45,8 @@ export default class TesPlugin extends Plugin {
 		});
 
 		this.addCommand({
-			id: 'testplugin-login-pkce',
-			name: 'TestPlugin Login PKCE',
+			id: 'testplugin-login-pkce-local',
+			name: 'TestPlugin Login PKCE Local',
 			checkCallback: (checking: boolean) => {
 				const canRun = !isLoggedIn();
 				if (checking) {
@@ -59,12 +60,30 @@ export default class TesPlugin extends Plugin {
 			}
 		});
 
+		this.addCommand({
+			id: 'testplugin-login-pkce-server',
+			name: 'TestPlugin Login PKCE Server',
+			checkCallback: (checking: boolean) => {
+				const canRun = !isLoggedIn();
+				if (checking) {
+					return canRun;
+				}
+				if (!canRun) {
+					return;
+				}
+				pkceFlowServerStart();
+			}
+		});
+
 		this.addSettingTab(new SettingsView(this.app, this));
 
 		// Register a custom protocol handler to get the code from the redirect url
 		this.registerObsidianProtocolHandler("googleLogin", async (req) => {
 			if (req.code && req.state && req.scope === "https://www.googleapis.com/auth/calendar") {
 				pkceFlowLocalEnd(req.code, req.state)
+			}
+			if (req.t) {
+				pkceFlowServerEnd(req.t)
 			}
 		});
 

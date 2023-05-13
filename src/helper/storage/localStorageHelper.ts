@@ -11,7 +11,7 @@ export const setTokenPassword = (password: string) => {
 }
 
 export const isLoggedIn = (): boolean => {
-	return window.localStorage.getItem(GOOGLE_CALENDAR_PLUGIN_REFRESH_KEY) != "";
+	return (window.localStorage.getItem(GOOGLE_CALENDAR_PLUGIN_REFRESH_KEY) ?? "") !== "";
 }
 
 //===================
