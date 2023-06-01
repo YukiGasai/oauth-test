@@ -1,19 +1,18 @@
+import { setAccessToken, setExpirationTime, setRefreshToken } from "../helper/storage/localStorageHelper";
 import { generateRsaKeys, rsaKeyToString } from "../helper/crypt/pkceHelper";
+import { aesGcmEncrypt } from "../helper/crypt/aes";
+import type { PKCESession } from "../helper/types";
 
-let authKeys;
+let session: PKCESession;
 
 export const pkceFlowServerStart = async () => {
 
-    if (authKeys) {
-        return;
+    if (!session.state) {
+        authKeys = await generateRsaKeys();
     }
-
-    authKeys = await generateRsaKeys();
-
     const publicKey = await rsaKeyToString(authKeys);
-    console.log(publicKey)
-    window.location.href = `http://localhost:42813/api/google/login?key=${publicKey}`;
 
+    window.location.href = `http://localhost:42813/api/google/login?key=${publicKey}`;
 }
 
 export const pkceFlowServerEnd = async (encryptedText) => {
@@ -22,14 +21,25 @@ export const pkceFlowServerEnd = async (encryptedText) => {
         return;
     }
 
-    const textEncoded = await window.crypto.subtle.decrypt(
+    const tokenEncoded = await window.crypto.subtle.decrypt(
         "RSA-OAEP",
         authKeys.privateKey,
         Buffer.from(encryptedText, 'base64url')
     )
 
-    const text = Buffer.from(textEncoded).toString('utf-8');
+    const tokenString = Buffer.from(tokenEncoded).toString('utf-8');
 
-    console.log(encryptedText, text)
+    const token = JSON.parse(tokenString);
 
+
+    const { access_token, refresh_token, expires_in } = token;
+
+    const encryptedAccessToken = await aesGcmEncrypt(access_token, session.password);
+    const encryptedRefreshToken = await aesGcmEncrypt(refresh_token, session.password);
+
+    setRefreshToken(token.refresh_token);
+    setAccessToken(token.access_token);
+    setExpirationTime(token.expires_in)
+
+    authKeys = null;
 }

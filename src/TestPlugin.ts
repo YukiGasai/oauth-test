@@ -1,7 +1,7 @@
 import { Plugin } from 'obsidian';
 import { DEFAULT_SETTINGS, SettingsView } from '../src/views/SettingsView';
 import type { TestPluginSettings } from './helper/types';
-import { pkceFlowLocalEnd, pkceFlowLocalStart } from '../src/oauth/pkceFlow';
+import { pkceFlowLocalEnd, pkceFlowLocalStart } from './oauth/pkceLocalFlow';
 import { clearTokens, isLoggedIn } from './helper/storage/localStorageHelper';
 import { PasswordEnterModal } from './modals/PasswordEnterModal';
 import { pkceFlowServerEnd, pkceFlowServerStart } from './oauth/pkceServerFlow';
@@ -79,11 +79,20 @@ export default class TesPlugin extends Plugin {
 
 		// Register a custom protocol handler to get the code from the redirect url
 		this.registerObsidianProtocolHandler("googleLogin", async (req) => {
+
+			// Don't allow login if already logged in
+			if (isLoggedIn()) return
+
+			// Local PKCE flow to get the code and exchange it for a token
 			if (req.code && req.state && req.scope === "https://www.googleapis.com/auth/calendar") {
-				pkceFlowLocalEnd(req.code, req.state)
+				await pkceFlowLocalEnd(req.code, req.state)
+				return;
 			}
+
+			// Server PKCE flow to get the token directly encrypted with public key of plugin
 			if (req.t) {
-				pkceFlowServerEnd(req.t)
+				await pkceFlowServerEnd(req.t)
+				return
 			}
 		});
 

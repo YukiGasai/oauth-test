@@ -1,5 +1,5 @@
 import { requestUrl } from "obsidian";
-import type { PKCESession } from "../helper/types";
+import type { PKCELocalSession } from "../helper/types";
 
 import { generateState, generateCodeChallenge, generateCodeVerifier } from "../helper/crypt/pkceHelper";
 import TestPlugin from "../TestPlugin";
@@ -11,7 +11,7 @@ import { setRefreshToken, setAccessToken, setExpirationTime } from "../helper/st
 const PUBLIC_CLIENT_ID = '290682291033-qngpea2175rjca11gb5tj94mqaosd19m.apps.googleusercontent.com'
 const PUBLIC_REDIRECT_URI = 'https://google-auth-obsidian-redirect.vercel.app/callback'
 
-let session: PKCESession;
+let session: PKCELocalSession;
 export const pkceFlowLocalStart = async () => {
     const plugin = TestPlugin.getInstance();
 

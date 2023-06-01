@@ -2,6 +2,7 @@ import { App, PluginSettingTab, Setting } from "obsidian";
 import type TestPlugin from "../TestPlugin";
 import type { TestPluginSettings } from "../helper/types";
 import { setAccessToken, setExpirationTime, setRefreshToken } from "../helper/storage/localStorageHelper";
+import { PasswordEnterModal } from "../modals/PasswordEnterModal";
 
 export const DEFAULT_SETTINGS: TestPluginSettings = {
 	encryptToken: false,
@@ -71,6 +72,23 @@ export class SettingsView extends PluginSettingTab {
 							await this.plugin.saveSettings();
 						})
 				);
+
+			if (this.plugin.settings.encryptToken) {
+				// new Setting(containerEl)
+				// 	.setName("Server url")
+				// 	.setDesc("Save the config and encrypt the secrets")
+				// 	.addButton((button) => {
+				// 		button.onClick(async () => {
+				// 			new PasswordEnterModal(this.app, (enteredPassword: string) => {
+
+				// 				this.plugin.settings.googleClientId = aesGcmEncrypt(this.plugin.settings.googleClientId, enteredPassword);
+				// 				this.plugin.settings.googleClientSecret = aesGcmEncrypt(this.plugin.settings.googleClientSecret, enteredPassword);
+				// 				this.plugin.saveSettings();
+				// 				this.display();
+				// 			}).open();
+				// 		});
+				// 	});
+			}
 		} else {
 
 			new Setting(containerEl)

@@ -29,7 +29,6 @@ export class PasswordEnterModal extends Modal {
             .addButton(button => {
                 button.setButtonText('Submit')
                 button.onClick(async (evt) => {
-
                     this.close();
                 });
             });
