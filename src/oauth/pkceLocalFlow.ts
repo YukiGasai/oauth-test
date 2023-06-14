@@ -3,8 +3,7 @@ import type { PKCELocalSession } from "../helper/types";
 
 import { generateState, generateCodeChallenge, generateCodeVerifier } from "../helper/crypt/pkceHelper";
 import TestPlugin from "../TestPlugin";
-import { PasswordSetupModal } from "../modals/PasswordSetupModal";
-import { aesGcmDecrypt, aesGcmEncrypt } from "../helper/crypt/aes";
+import { aesGcmEncrypt } from "../helper/crypt/aes";
 import { setRefreshToken, setAccessToken, setExpirationTime } from "../helper/storage/localStorageHelper";
 
 
@@ -30,32 +29,17 @@ export const pkceFlowLocalStart = async () => {
     authUrl += `&state=${state}`;
     authUrl += `&code_challenge_method=S256`;
     authUrl += `&code_challenge=${codeChallenge}`;
+    authUrl += `&prompt=consent`;
     authUrl += `&access_type=offline`;
 
-    if (plugin.settings.encryptToken) {
-        new PasswordSetupModal(plugin.app, (enteredPassword: string) => {
-            if (!enteredPassword || enteredPassword == "") return;
-
-            session = {
-                state,
-                codeVerifier,
-                password: enteredPassword
-            }
-
-            window.location.href = authUrl
-            console.log(`Please visit this URL to authorize the application: ${authUrl}`);
-
-        }).open();
-    } else {
-
-        session = {
-            state,
-            codeVerifier,
-        }
-
-        window.location.href = authUrl
-        console.log(`Please visit this URL to authorize the application: ${authUrl}`);
+    session = {
+        state,
+        codeVerifier,
     }
+
+    window.location.href = authUrl
+    console.log(`Please visit this URL to authorize the application: ${authUrl}`);
+
 }
 
 
@@ -63,16 +47,15 @@ export async function pkceFlowLocalEnd(code: string, state: string) {
     const plugin = TestPlugin.getInstance();
 
     const CLIENT_ID = plugin.settings.useCustomClient ? plugin.settings.googleClientId : PUBLIC_CLIENT_ID;
-
+    const CLIENT_SECRET = plugin.settings.useCustomClient ? plugin.settings.googleClientSecret : atob('R09DU1BYLXptb0E3MVpZYWFqd1Nqc05VYnZOUmJJczh3YTc');
     const REDIRECT_URI = plugin.settings.useCustomClient ? plugin.settings.googleOAuthServer : PUBLIC_REDIRECT_URI;
 
-    const h = 'R09DU1BYLXptb0E3MVpZYWFqd1Nqc05VYnZOUmJJczh3YTc='
     if (!session || state !== session.state) return;
 
     let url = 'https://oauth2.googleapis.com/token'
     url += `?code=${code}`;
     url += `&client_id=${CLIENT_ID}`;
-    url += `&client_secret=${atob(h)}`;
+    url += `&client_secret=${CLIENT_SECRET}`;
     url += `&redirect_uri=${REDIRECT_URI}`;
     url += `&code_verifier=${session.codeVerifier}`;
     url += `&grant_type=authorization_code`;
@@ -84,16 +67,13 @@ export async function pkceFlowLocalEnd(code: string, state: string) {
         throw: false
     })
 
-
+    console.log(tokenRequest.json)
     const { access_token, refresh_token, expires_in } = tokenRequest.json;
 
-    const encryptedAccessToken = await aesGcmEncrypt(access_token, session.password);
-    const encryptedRefreshToken = await aesGcmEncrypt(refresh_token, session.password);
+    await setRefreshToken(refresh_token);
+    await setAccessToken(access_token);
+    setExpirationTime(+new Date() + expires_in * 1000);
 
-    setRefreshToken(encryptedRefreshToken);
-    setAccessToken(encryptedAccessToken);
-    setExpirationTime(expires_in)
-
-    session = undefined;
-
+    session = null;
+    plugin.settingsTab.display();
 }

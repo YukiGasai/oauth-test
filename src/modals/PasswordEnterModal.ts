@@ -1,3 +1,4 @@
+import { on } from "events";
 import { App, Modal, Setting } from "obsidian";
 
 export class PasswordEnterModal extends Modal {
@@ -36,7 +37,16 @@ export class PasswordEnterModal extends Modal {
 
     onClose() {
         const { contentEl } = this;
-        this.setPassword(this.password)
-        contentEl.empty();
+        // Make sure a password is entered
+        // Else open the modal again
+        if (this.password) {
+            this.setPassword(this.password)
+            contentEl.empty();
+        } else {
+            new PasswordEnterModal(this.app, (enteredPassword) => {
+                this.password = enteredPassword
+                this.onClose();
+            }).open();
+        }
     }
 }

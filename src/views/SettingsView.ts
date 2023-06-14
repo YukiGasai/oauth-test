@@ -1,11 +1,13 @@
 import { App, PluginSettingTab, Setting } from "obsidian";
 import type TestPlugin from "../TestPlugin";
-import type { TestPluginSettings } from "../helper/types";
-import { setAccessToken, setExpirationTime, setRefreshToken } from "../helper/storage/localStorageHelper";
-import { PasswordEnterModal } from "../modals/PasswordEnterModal";
+import { InfoModalType, TestPluginSettings } from "../helper/types";
+import { clearClient, clearTokens, getClientId, getClientSecret, setAccessToken, setClientId, setClientSecret, setExpirationTime, setRefreshToken } from "../helper/storage/localStorageHelper";
+import { SettingsInfoModal } from "../modals/SettingsInfoModal";
+import { pkceFlowServerStart } from "../oauth/pkceServerFlow";
+import { isLoggedIn } from "../helper/storage/localStorageHelper";
 
 export const DEFAULT_SETTINGS: TestPluginSettings = {
-	encryptToken: false,
+	encryptToken: true,
 	useCustomClient: false,
 	googleClientId: '',
 	googleClientSecret: '',
@@ -14,18 +16,45 @@ export const DEFAULT_SETTINGS: TestPluginSettings = {
 
 export class SettingsView extends PluginSettingTab {
 	plugin: TestPlugin;
+	clientId: string;
+	clientSecret = '';
+	oauthServer = '';
 
 	constructor(app: App, plugin: TestPlugin) {
 		super(app, plugin);
 		this.plugin = plugin;
+		this.oauthServer = this.plugin.settings.googleOAuthServer;
+		if (this.plugin.settings.encryptToken) {
+			(async () => {
+				this.clientId = await getClientId();
+				this.clientSecret = await getClientSecret();
+			})();
+		}
 	}
 
-	display(): void {
+	async display(): Promise<void> {
 		const { containerEl } = this;
 
 		containerEl.empty();
 
 		containerEl.createEl('h2', { text: 'Settings for OAuth test plugin.' });
+
+		new Setting(containerEl)
+			.setName('Protect google Login')
+			.setDesc('This will encrypt the google login data with a password you set.')
+			.addToggle(toggle => {
+				toggle.setValue(this.plugin.settings.encryptToken)
+				toggle.onChange(async (value) => {
+					if (value === false) {
+						new SettingsInfoModal(this.app, InfoModalType.ENCRYPT_INFO).open();
+					}
+					this.plugin.settings.encryptToken = value;
+					await this.plugin.saveSettings();
+					clearTokens();
+					clearClient();
+					this.display();
+				});
+			});
 
 		new Setting(containerEl)
 			.setName("Use own authentication client")
@@ -34,9 +63,10 @@ export class SettingsView extends PluginSettingTab {
 				toggle
 					.setValue(this.plugin.settings.useCustomClient)
 					.onChange(async (value) => {
-						setRefreshToken("");
-						setAccessToken("");
-						setExpirationTime(0);
+						if (value === false) {
+							new SettingsInfoModal(this.app, InfoModalType.USE_OWN_CLIENT).open();
+						}
+						clearTokens();
 						this.plugin.settings.useCustomClient = value;
 						await this.plugin.saveSettings();
 						this.display();
@@ -52,43 +82,41 @@ export class SettingsView extends PluginSettingTab {
 				.addText((text) =>
 					text
 						.setPlaceholder("Enter your client id")
-						.setValue(this.plugin.settings.googleClientId)
-						.onChange(async (value) => {
-							this.plugin.settings.googleClientId = value.trim();
-							await this.plugin.saveSettings();
+						.setValue(this.clientId)
+						.onChange(value => {
+							this.clientId = value.trim();
 						})
-				);
+				)
+
 
 			new Setting(containerEl)
 				.setName("ClientSecret")
 				.setDesc("Google client secret")
 				.setClass("SubSettings")
-				.addText((text) =>
+				.addText((text) => {
+					text.inputEl.type = "password";
 					text
 						.setPlaceholder("Enter your client secret")
-						.setValue(this.plugin.settings.googleClientSecret)
-						.onChange(async (value) => {
-							this.plugin.settings.googleClientSecret = value.trim();
-							await this.plugin.saveSettings();
+						.setValue(this.clientSecret)
+						.onChange(value => {
+							this.clientSecret = value.trim();
+						})
+				})
+
+			new Setting(containerEl)
+				.setName("Save")
+				.setDesc("Save the client id and secret")
+				.setClass("SubSettings")
+				.addButton((button) =>
+					button
+						.setButtonText("Save")
+						.onClick(async () => {
+							await setClientId(this.clientId);
+							await setClientSecret(this.clientSecret);
+							this.display();
 						})
 				);
 
-			if (this.plugin.settings.encryptToken) {
-				// new Setting(containerEl)
-				// 	.setName("Server url")
-				// 	.setDesc("Save the config and encrypt the secrets")
-				// 	.addButton((button) => {
-				// 		button.onClick(async () => {
-				// 			new PasswordEnterModal(this.app, (enteredPassword: string) => {
-
-				// 				this.plugin.settings.googleClientId = aesGcmEncrypt(this.plugin.settings.googleClientId, enteredPassword);
-				// 				this.plugin.settings.googleClientSecret = aesGcmEncrypt(this.plugin.settings.googleClientSecret, enteredPassword);
-				// 				this.plugin.saveSettings();
-				// 				this.display();
-				// 			}).open();
-				// 		});
-				// 	});
-			}
 		} else {
 
 			new Setting(containerEl)
@@ -97,24 +125,57 @@ export class SettingsView extends PluginSettingTab {
 				.setClass("SubSettings")
 				.addText(text => {
 					text
-						.setValue(this.plugin.settings.googleOAuthServer)
-						.onChange(async (value) => {
-							this.plugin.settings.googleOAuthServer = value.trim();
-							await this.plugin.saveSettings();
+						.setValue(this.oauthServer)
+						.onChange(value => {
+							this.oauthServer = value.trim();
 						})
 				})
+				.addButton((button) =>
+					button
+						.setButtonText("Save")
+						.onClick(async () => {
+							this.plugin.settings.googleOAuthServer = this.oauthServer;
+							await this.plugin.saveSettings();
+							this.display();
+						})
+				);
 
 		}
 
-		new Setting(containerEl)
-			.setName('Protect google Login')
-			.setDesc('This will encrypt the google login data with a password you set.')
-			.addToggle(toggle => {
-				toggle.setValue(this.plugin.settings.encryptToken)
-				toggle.onChange(async (value) => {
-					this.plugin.settings.encryptToken = value;
-					await this.plugin.saveSettings();
-				});
-			});
+		const getLoginButtonStatus = async () => {
+			if (this.plugin.settings.useCustomClient) {
+				return (await getClientId() === '') || (await getClientSecret() === '');
+			} else {
+				return this.plugin.settings.googleOAuthServer === '';
+			}
+		}
+
+		if (isLoggedIn()) {
+			new Setting(containerEl)
+				.setName("Logout")
+				.setDesc("Logout from google")
+				.addButton((button) => {
+					button.setClass("login-with-google-btn")
+					button.setButtonText("Sign out from Google")
+					button.onClick(() => {
+						clearTokens();
+						this.display();
+					})
+				})
+		} else {
+			const buttonState = await getLoginButtonStatus()
+			new Setting(containerEl)
+				.setName("Login")
+				.setDesc("Login with google")
+				.addButton((button) => {
+					button.setDisabled(buttonState)
+					button.setClass("login-with-google-btn")
+					button.setButtonText("Sign in with Google")
+					button.onClick(() => {
+						pkceFlowServerStart();
+					})
+				})
+		}
+
 	}
 }

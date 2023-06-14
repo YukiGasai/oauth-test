@@ -1,3 +1,5 @@
+import { Notice } from "obsidian";
+
 /**
  * Encrypts plaintext using AES-GCM with supplied password, for decryption with aesGcmDecrypt().
  *                                                                      (c) Chris Veness MIT Licence
@@ -75,6 +77,7 @@ export async function aesGcmDecrypt(ciphertext: string, password: string) {
 		return plaintext;                                                                  // return the plaintext
 	} catch (e) {
 		console.log("Error decrypting: password is incorrect");
+		new Notice("[Test plugin] Password is incorrect. Restart Obsidian to try again.");
 		return ciphertext;
 	}
 

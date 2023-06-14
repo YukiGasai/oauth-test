@@ -1,29 +1,38 @@
 import { setAccessToken, setExpirationTime, setRefreshToken } from "../helper/storage/localStorageHelper";
 import { generateRsaKeys, rsaKeyToString } from "../helper/crypt/pkceHelper";
 import { aesGcmEncrypt } from "../helper/crypt/aes";
-import type { PKCESession } from "../helper/types";
+import type { PKCEServerSession } from "../helper/types";
+import TestPlugin from "../TestPlugin";
 
-let session: PKCESession;
+let session: PKCEServerSession = null;
 
 export const pkceFlowServerStart = async () => {
+    const plugin = TestPlugin.getInstance();
 
-    if (!session.state) {
-        authKeys = await generateRsaKeys();
+    if (!session?.state) {
+
+        const keys = await generateRsaKeys();
+        const publicKey = await rsaKeyToString(keys);
+        session = {
+            keys,
+            state: publicKey,
+        }
     }
-    const publicKey = await rsaKeyToString(authKeys);
 
-    window.location.href = `http://localhost:42813/api/google/login?key=${publicKey}`;
+    window.location.href = `${plugin.settings.googleOAuthServer}/api/google/login?key=${session.state}`;
 }
 
 export const pkceFlowServerEnd = async (encryptedText) => {
 
-    if (!authKeys) {
+    const plugin = TestPlugin.getInstance();
+
+    if (!session?.state) {
         return;
     }
 
     const tokenEncoded = await window.crypto.subtle.decrypt(
         "RSA-OAEP",
-        authKeys.privateKey,
+        session.keys.privateKey,
         Buffer.from(encryptedText, 'base64url')
     )
 
@@ -31,15 +40,12 @@ export const pkceFlowServerEnd = async (encryptedText) => {
 
     const token = JSON.parse(tokenString);
 
-
     const { access_token, refresh_token, expires_in } = token;
 
-    const encryptedAccessToken = await aesGcmEncrypt(access_token, session.password);
-    const encryptedRefreshToken = await aesGcmEncrypt(refresh_token, session.password);
+    await setRefreshToken(refresh_token);
+    await setAccessToken(access_token);
+    setExpirationTime(+new Date() + expires_in * 1000)
 
-    setRefreshToken(token.refresh_token);
-    setAccessToken(token.access_token);
-    setExpirationTime(token.expires_in)
-
-    authKeys = null;
+    session = null;
+    plugin.settingsTab.display();
 }

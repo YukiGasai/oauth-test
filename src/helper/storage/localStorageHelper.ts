@@ -1,13 +1,36 @@
-import { aesGcmDecrypt } from "../crypt/aes";
+import TestPlugin from "../../TestPlugin";
+import { PasswordEnterModal } from "../../modals/PasswordEnterModal";
+import { aesGcmDecrypt, aesGcmEncrypt } from "../crypt/aes";
 
 const GOOGLE_CALENDAR_PLUGIN_REFRESH_KEY = 'google_calendar_plugin_refresh_key';
 const GOOGLE_CALENDAR_PLUGIN_ACCESS_KEY = 'google_calendar_plugin_access_key';
 const GOOGLE_CALENDAR_PLUGIN_EXPIRATION_KEY = 'google_calendar_plugin_expiration_key';
+const GOOGLE_CALENDAR_PLUGIN_CLIENT_ID_KEY = 'google_calendar_plugin_client_id_key';
+const GOOGLE_CALENDAR_PLUGIN_CLIENT_SECRET_KEY = 'google_calendar_plugin_client_secret_key';
 
 let tokenPassword = null;
-
+let getPasswordModalIsOpen = false;
 export const setTokenPassword = (password: string) => {
 	tokenPassword = password;
+}
+
+async function waitForPassword() {
+	while (!tokenPassword)
+		await new Promise(resolve => setTimeout(resolve, 1000));
+}
+
+const getPassword = async (): Promise<string> => {
+	if (tokenPassword) return tokenPassword;
+	if (!getPasswordModalIsOpen) {
+		new PasswordEnterModal(TestPlugin.getInstance().app, (enteredPassword: string) => {
+			setTokenPassword(enteredPassword);
+			getPasswordModalIsOpen = false;
+		}).open();
+		getPasswordModalIsOpen = true;
+	}
+
+	await waitForPassword()
+	return tokenPassword;
 }
 
 export const isLoggedIn = (): boolean => {
@@ -23,11 +46,12 @@ export const isLoggedIn = (): boolean => {
  * @returns googleAccessToken
  */
 export const getAccessToken = async (): Promise<string> => {
-	if (tokenPassword) {
-		return (await aesGcmDecrypt(window.localStorage.getItem(GOOGLE_CALENDAR_PLUGIN_ACCESS_KEY) ?? "", tokenPassword));
-	} else {
-		return window.localStorage.getItem(GOOGLE_CALENDAR_PLUGIN_ACCESS_KEY) ?? "";
+	const accessToken = window.localStorage.getItem(GOOGLE_CALENDAR_PLUGIN_ACCESS_KEY) ?? "";
+
+	if (!TestPlugin.getInstance().settings.encryptToken || accessToken == "") {
+		return accessToken;
 	}
+	return (await aesGcmDecrypt(accessToken, (await getPassword())));
 };
 
 /**
@@ -35,11 +59,12 @@ export const getAccessToken = async (): Promise<string> => {
  * @returns googleRefreshToken
  */
 export const getRefreshToken = async (): Promise<string> => {
-	if (tokenPassword) {
-		return (await aesGcmDecrypt(window.localStorage.getItem(GOOGLE_CALENDAR_PLUGIN_REFRESH_KEY) ?? "", tokenPassword));
-	} else {
-		return window.localStorage.getItem(GOOGLE_CALENDAR_PLUGIN_REFRESH_KEY) ?? "";
+	const refreshToken = window.localStorage.getItem(GOOGLE_CALENDAR_PLUGIN_REFRESH_KEY) ?? "";
+
+	if (!TestPlugin.getInstance().settings.encryptToken || refreshToken == "") {
+		return refreshToken;
 	}
+	return (await aesGcmDecrypt(refreshToken, (await getPassword())));
 };
 
 /**
@@ -52,6 +77,32 @@ export const getExpirationTime = (): number => {
 	return parseInt(expirationTimeString, 10);
 };
 
+/**
+ * getClientId from LocalStorage
+ * @returns googleClientId
+ * */
+export const getClientId = async (): Promise<string> => {
+	const clientId = window.localStorage.getItem(GOOGLE_CALENDAR_PLUGIN_CLIENT_ID_KEY) ?? "";
+
+	if (!TestPlugin.getInstance().settings.encryptToken || clientId == "") {
+		return clientId;
+	}
+	return (await aesGcmDecrypt(clientId, (await getPassword())));
+};
+
+/**
+ * getClientSecret from LocalStorage
+ * @returns googleClientSecret
+ * */
+export const getClientSecret = async (): Promise<string> => {
+	const clientSecret = window.localStorage.getItem(GOOGLE_CALENDAR_PLUGIN_CLIENT_SECRET_KEY) ?? "";
+
+	if (!TestPlugin.getInstance().settings.encryptToken || clientSecret == "") {
+		return clientSecret;
+	}
+	return (await aesGcmDecrypt(clientSecret, (await getPassword())));
+};
+
 
 //===================
 //SETTER
@@ -62,7 +113,11 @@ export const getExpirationTime = (): number => {
  * @param googleAccessToken googleAccessToken
  * @returns googleAccessToken
  */
-export const setAccessToken = (googleAccessToken: string): void => {
+export const setAccessToken = async (googleAccessToken: string): Promise<void> => {
+	if (TestPlugin.getInstance().settings.encryptToken) {
+		const password = await getPassword();
+		googleAccessToken = await aesGcmEncrypt(googleAccessToken, password);
+	}
 	window.localStorage.setItem(GOOGLE_CALENDAR_PLUGIN_ACCESS_KEY, googleAccessToken);
 };
 
@@ -71,8 +126,11 @@ export const setAccessToken = (googleAccessToken: string): void => {
  * @param googleRefreshToken googleRefreshToken
  * @returns googleRefreshToken
  */
-export const setRefreshToken = (googleRefreshToken: string): void => {
-	if (googleRefreshToken == "undefined") return;
+export const setRefreshToken = async (googleRefreshToken: string): Promise<void> => {
+	if (TestPlugin.getInstance().settings.encryptToken) {
+		const password = await getPassword();
+		googleRefreshToken = await aesGcmEncrypt(googleRefreshToken, password);
+	}
 	window.localStorage.setItem(GOOGLE_CALENDAR_PLUGIN_REFRESH_KEY, googleRefreshToken);
 };
 
@@ -89,6 +147,22 @@ export const setExpirationTime = (googleExpirationTime: number): void => {
 	);
 };
 
+export const setClientId = async (clientId: string): Promise<void> => {
+	if (TestPlugin.getInstance().settings.encryptToken) {
+		const password = await getPassword();
+		clientId = await aesGcmEncrypt(clientId, password);
+	}
+	window.localStorage.setItem(GOOGLE_CALENDAR_PLUGIN_CLIENT_ID_KEY, clientId);
+};
+
+export const setClientSecret = async (clientSecret: string): Promise<void> => {
+	if (TestPlugin.getInstance().settings.encryptToken) {
+		const password = await getPassword();
+		clientSecret = await aesGcmEncrypt(clientSecret, password);
+	}
+	window.localStorage.setItem(GOOGLE_CALENDAR_PLUGIN_CLIENT_SECRET_KEY, clientSecret);
+};
+
 // ===================
 // CLEAR
 // ===================
@@ -97,4 +171,9 @@ export const clearTokens = (): void => {
 	window.localStorage.setItem(GOOGLE_CALENDAR_PLUGIN_ACCESS_KEY, "");
 	window.localStorage.setItem(GOOGLE_CALENDAR_PLUGIN_REFRESH_KEY, "");
 	window.localStorage.setItem(GOOGLE_CALENDAR_PLUGIN_EXPIRATION_KEY, "");
+}
+
+export const clearClient = (): void => {
+	window.localStorage.setItem(GOOGLE_CALENDAR_PLUGIN_CLIENT_ID_KEY, "");
+	window.localStorage.setItem(GOOGLE_CALENDAR_PLUGIN_CLIENT_SECRET_KEY, "");
 }

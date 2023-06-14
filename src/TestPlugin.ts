@@ -3,21 +3,21 @@ import { DEFAULT_SETTINGS, SettingsView } from '../src/views/SettingsView';
 import type { TestPluginSettings } from './helper/types';
 import { pkceFlowLocalEnd, pkceFlowLocalStart } from './oauth/pkceLocalFlow';
 import { clearTokens, isLoggedIn } from './helper/storage/localStorageHelper';
-import { PasswordEnterModal } from './modals/PasswordEnterModal';
 import { pkceFlowServerEnd, pkceFlowServerStart } from './oauth/pkceServerFlow';
+import { getGoogleEvents } from './api/getEvents';
 
-export default class TesPlugin extends Plugin {
-	private static instance: TesPlugin;
+export default class TestPlugin extends Plugin {
+	private static instance: TestPlugin;
 
-	public static getInstance(): TesPlugin {
-		return TesPlugin.instance;
+	public static getInstance(): TestPlugin {
+		return TestPlugin.instance;
 	}
 
-
+	settingsTab: SettingsView;
 	settings: TestPluginSettings;
 	private password: string;
 	async onload() {
-		TesPlugin.instance = this;
+		TestPlugin.instance = this;
 
 		await this.loadSettings();
 
@@ -75,7 +75,23 @@ export default class TesPlugin extends Plugin {
 			}
 		});
 
-		this.addSettingTab(new SettingsView(this.app, this));
+		this.addCommand({
+			id: 'testplugin-get-events',
+			name: 'TestPlugin Get Events',
+			checkCallback: (checking: boolean) => {
+				const canRun = isLoggedIn();
+				if (checking) {
+					return canRun;
+				}
+				if (!canRun) {
+					return;
+				}
+				getGoogleEvents();
+			}
+		});
+
+		this.settingsTab = new SettingsView(this.app, this)
+		this.addSettingTab(this.settingsTab);
 
 		// Register a custom protocol handler to get the code from the redirect url
 		this.registerObsidianProtocolHandler("googleLogin", async (req) => {
@@ -90,19 +106,11 @@ export default class TesPlugin extends Plugin {
 			}
 
 			// Server PKCE flow to get the token directly encrypted with public key of plugin
-			if (req.t) {
-				await pkceFlowServerEnd(req.t)
+			if (req.token) {
+				await pkceFlowServerEnd(req.token)
 				return
 			}
 		});
-
-		if (isLoggedIn()) {
-			new PasswordEnterModal(this.app, (enteredPassword: string) => {
-				if (!enteredPassword || enteredPassword == "") return;
-				TesPlugin.getInstance().password = enteredPassword;
-			}).open();
-		}
-
 	}
 
 	onunload() {
