@@ -5,7 +5,8 @@
 	"main": "main.js",
 	"scripts": {
 		"dev": "node esbuild.config.mjs",
-		"build": "node esbuild.config.mjs production"
+		"build": "node esbuild.config.mjs production",
+		"mobile": "npm run build && node ./scripts/moveToPhone.js"
 	},
 	"keywords": [],
 	"author": "YukiGasai",
@@ -30,8 +31,5 @@
 		"js",
 		"ts",
 		"svelte"
-	],
-	"dependencies": {
-
-	}
+	]
 }

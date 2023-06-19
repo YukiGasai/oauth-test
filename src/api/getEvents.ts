@@ -1,5 +1,5 @@
 import { requestUrl } from "obsidian";
-import { getAccessToken } from "../helper/storage/localStorageHelper";
+import { getValidAccessToken } from "../helper/storage/getValidAccessToken";
 import type { GoogleEvent } from "../helper/types";
 
 export const getGoogleEvents = async (): Promise<GoogleEvent[]> => {
@@ -8,9 +8,9 @@ export const getGoogleEvents = async (): Promise<GoogleEvent[]> => {
         url: "https://www.googleapis.com/calendar/v3/calendars/primary/events",
         method: "GET",
         headers: {
-            "application/json": "Content-Type",
-            "Authorization": `Bearer ${(await getAccessToken())}`
+            "Authorization": `Bearer ${(await getValidAccessToken())}`
         },
+        contentType: "application/json",
         throw: false
     });
 

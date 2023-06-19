@@ -1,16 +1,15 @@
 import { App, PluginSettingTab, Setting } from "obsidian";
 import type TestPlugin from "../TestPlugin";
 import { InfoModalType, TestPluginSettings } from "../helper/types";
-import { clearClient, clearTokens, getClientId, getClientSecret, setAccessToken, setClientId, setClientSecret, setExpirationTime, setRefreshToken } from "../helper/storage/localStorageHelper";
+import { clearClient, clearTokens, getClientId, getClientSecret, setClientId, setClientSecret, setTokenPassword } from "../helper/storage/localStorageHelper";
 import { SettingsInfoModal } from "../modals/SettingsInfoModal";
 import { pkceFlowServerStart } from "../oauth/pkceServerFlow";
 import { isLoggedIn } from "../helper/storage/localStorageHelper";
+import { pkceFlowLocalStart } from "../oauth/pkceLocalFlow";
 
 export const DEFAULT_SETTINGS: TestPluginSettings = {
 	encryptToken: true,
 	useCustomClient: false,
-	googleClientId: '',
-	googleClientSecret: '',
 	googleOAuthServer: 'https://google-auth-obsidian-redirect.vercel.app',
 }
 
@@ -24,12 +23,10 @@ export class SettingsView extends PluginSettingTab {
 		super(app, plugin);
 		this.plugin = plugin;
 		this.oauthServer = this.plugin.settings.googleOAuthServer;
-		if (this.plugin.settings.encryptToken) {
-			(async () => {
-				this.clientId = await getClientId();
-				this.clientSecret = await getClientSecret();
-			})();
-		}
+		(async () => {
+			this.clientId = await getClientId();
+			this.clientSecret = await getClientSecret();
+		})();
 	}
 
 	async display(): Promise<void> {
@@ -52,6 +49,7 @@ export class SettingsView extends PluginSettingTab {
 					await this.plugin.saveSettings();
 					clearTokens();
 					clearClient();
+					setTokenPassword(null)
 					this.display();
 				});
 			});
@@ -172,7 +170,11 @@ export class SettingsView extends PluginSettingTab {
 					button.setClass("login-with-google-btn")
 					button.setButtonText("Sign in with Google")
 					button.onClick(() => {
-						pkceFlowServerStart();
+						if (this.plugin.settings.useCustomClient) {
+							pkceFlowLocalStart();
+						} else {
+							pkceFlowServerStart();
+						}
 					})
 				})
 		}

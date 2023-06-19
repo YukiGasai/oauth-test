@@ -5,6 +5,8 @@ import { pkceFlowLocalEnd, pkceFlowLocalStart } from './oauth/pkceLocalFlow';
 import { clearTokens, isLoggedIn } from './helper/storage/localStorageHelper';
 import { pkceFlowServerEnd, pkceFlowServerStart } from './oauth/pkceServerFlow';
 import { getGoogleEvents } from './api/getEvents';
+import { getGoogleCalendars } from './api/getCalendars';
+import { aesGcmDecrypt, aesGcmEncrypt } from 'src/helper/crypt/aes';
 
 export default class TestPlugin extends Plugin {
 	private static instance: TestPlugin;
@@ -15,7 +17,6 @@ export default class TestPlugin extends Plugin {
 
 	settingsTab: SettingsView;
 	settings: TestPluginSettings;
-	private password: string;
 	async onload() {
 		TestPlugin.instance = this;
 
@@ -90,6 +91,45 @@ export default class TestPlugin extends Plugin {
 			}
 		});
 
+		this.addCommand({
+			id: 'testplugin-get-calendars',
+			name: 'TestPlugin Get Calendars',
+			checkCallback: (checking: boolean) => {
+				const canRun = isLoggedIn();
+				if (checking) {
+					return canRun;
+				}
+				if (!canRun) {
+					return;
+				}
+				getGoogleCalendars();
+			}
+		});
+
+
+		this.addCommand({
+			id: 'testplugin-test-encryption',
+			name: 'TestPlugin Test Encryption',
+			checkCallback: (checking: boolean) => {
+				const canRun = isLoggedIn();
+				if (checking) {
+					return canRun;
+				}
+				if (!canRun) {
+					return;
+				}
+
+				(async () => {
+					const password = "password"
+					const text = "Hello World!"
+					const encryptedText = await aesGcmEncrypt(text, password)
+					console.log({ encryptedText })
+					const decryptedText = await aesGcmDecrypt(encryptedText, password)
+					console.log({ decryptedText })
+				})();
+			}
+		});
+
 		this.settingsTab = new SettingsView(this.app, this)
 		this.addSettingTab(this.settingsTab);
 
@@ -100,7 +140,7 @@ export default class TestPlugin extends Plugin {
 			if (isLoggedIn()) return
 
 			// Local PKCE flow to get the code and exchange it for a token
-			if (req.code && req.state && req.scope === "https://www.googleapis.com/auth/calendar") {
+			if (req.code && req.state && req.scope.split(" ").every(scope => ["https://www.googleapis.com/auth/calendar.events", "https://www.googleapis.com/auth/calendar.readonly"].indexOf(scope) > -1)) {
 				await pkceFlowLocalEnd(req.code, req.state)
 				return;
 			}
