@@ -7,6 +7,7 @@ import { pkceFlowServerEnd, pkceFlowServerStart } from './oauth/pkceServerFlow';
 import { getGoogleEvents } from './api/getEvents';
 import { getGoogleCalendars } from './api/getCalendars';
 import { aesGcmDecrypt, aesGcmEncrypt } from 'src/helper/crypt/aes';
+import { scopeTest } from 'src/helper/scopeTest';
 
 export default class TestPlugin extends Plugin {
 	private static instance: TestPlugin;
@@ -139,8 +140,11 @@ export default class TestPlugin extends Plugin {
 			// Don't allow login if already logged in
 			if (isLoggedIn()) return
 
+			// Check if the scope is valid
+			if (!scopeTest(req.scope)) return
+
 			// Local PKCE flow to get the code and exchange it for a token
-			if (req.code && req.state && req.scope.split(" ").every(scope => ["https://www.googleapis.com/auth/calendar.events", "https://www.googleapis.com/auth/calendar.readonly"].indexOf(scope) > -1)) {
+			if (req.code && req.state) {
 				await pkceFlowLocalEnd(req.code, req.state)
 				return;
 			}

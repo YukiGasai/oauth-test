@@ -35,7 +35,6 @@ export const pkceFlowServerStart = async () => {
             state: publicKey,
         }
     }
-
     window.location.href = `${plugin.settings.googleOAuthServer}/api/google/login?key=${session.state}`;
 }
 
@@ -57,11 +56,11 @@ export const pkceFlowServerEnd = async (encryptedText) => {
 
     const token = JSON.parse(tokenString);
 
-    const { access_token, refresh_token, expires_in } = token;
-
+    const [access_token, refresh_token] = token;
+    const expirationTime = 4000;
     await setRefreshToken(refresh_token);
     await setAccessToken(access_token);
-    setExpirationTime(+new Date() + expires_in * 1000)
+    setExpirationTime(+new Date() + expirationTime * 1000)
 
     session = null;
     plugin.settingsTab.display();
