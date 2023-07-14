@@ -3,7 +3,7 @@ import { DEFAULT_SETTINGS, SettingsView } from '../src/views/SettingsView';
 import type { TestPluginSettings } from './helper/types';
 import { pkceFlowLocalEnd, pkceFlowLocalStart } from './oauth/pkceLocalFlow';
 import { clearTokens, isLoggedIn } from './helper/storage/localStorageHelper';
-import { pkceFlowServerEnd, pkceFlowServerStart } from './oauth/pkceServerFlow';
+import { codeFlowServerEnd, codeFlowServerStart } from './oauth/codeServerFlow';
 import { getGoogleEvents } from './api/getEvents';
 import { getGoogleCalendars } from './api/getCalendars';
 import { aesGcmDecrypt, aesGcmEncrypt } from 'src/helper/crypt/aes';
@@ -48,7 +48,7 @@ export default class TestPlugin extends Plugin {
 
 		this.addCommand({
 			id: 'testplugin-login-pkce-local',
-			name: 'TestPlugin Login PKCE Local',
+			name: 'TestPlugin Login with PKCE Local Flow',
 			checkCallback: (checking: boolean) => {
 				const canRun = !isLoggedIn();
 				if (checking) {
@@ -63,8 +63,8 @@ export default class TestPlugin extends Plugin {
 		});
 
 		this.addCommand({
-			id: 'testplugin-login-pkce-server',
-			name: 'TestPlugin Login PKCE Server',
+			id: 'testplugin-login-code-server',
+			name: 'TestPlugin Login with Code Server Flow',
 			checkCallback: (checking: boolean) => {
 				const canRun = !isLoggedIn();
 				if (checking) {
@@ -73,7 +73,7 @@ export default class TestPlugin extends Plugin {
 				if (!canRun) {
 					return;
 				}
-				pkceFlowServerStart();
+				codeFlowServerStart();
 			}
 		});
 
@@ -149,9 +149,9 @@ export default class TestPlugin extends Plugin {
 				return;
 			}
 
-			// Server PKCE flow to get the token directly encrypted with public key of plugin
+			// Server Code flow to get the token directly encrypted with public key of plugin
 			if (req.token) {
-				await pkceFlowServerEnd(req.token)
+				await codeFlowServerEnd(req.token)
 				return
 			}
 		});

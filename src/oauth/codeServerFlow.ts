@@ -1,9 +1,9 @@
 import { setAccessToken, setExpirationTime, setRefreshToken } from "../helper/storage/localStorageHelper";
-import { generateRsaKeys, rsaKeyToString } from "../helper/crypt/pkceHelper";
-import type { PKCEServerSession } from "../helper/types";
+import { generateRsaKeys, rsaKeyToString } from "../helper/crypt/codeHelper";
+import type { CodeServerSession } from "../helper/types";
 import TestPlugin from "../TestPlugin";
 
-let session: PKCEServerSession = null;
+let session: CodeServerSession = null;
 
 
 function base64UrlDecode(base64Url: string): ArrayBuffer {
@@ -23,7 +23,7 @@ function arrayBufferToUtf8String(arrayBuffer: ArrayBuffer): string {
     return decoder.decode(arrayBuffer);
 }
 
-export const pkceFlowServerStart = async () => {
+export const codeFlowServerStart = async () => {
     const plugin = TestPlugin.getInstance();
 
     if (!session?.state) {
@@ -38,7 +38,7 @@ export const pkceFlowServerStart = async () => {
     window.location.href = `${plugin.settings.googleOAuthServer}/api/google/login?key=${session.state}`;
 }
 
-export const pkceFlowServerEnd = async (encryptedText) => {
+export const codeFlowServerEnd = async (encryptedText) => {
 
     const plugin = TestPlugin.getInstance();
 

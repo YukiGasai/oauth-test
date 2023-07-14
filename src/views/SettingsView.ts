@@ -3,7 +3,7 @@ import type TestPlugin from "../TestPlugin";
 import { InfoModalType, TestPluginSettings } from "../helper/types";
 import { clearClient, clearTokens, getClientId, getClientSecret, setClientId, setClientSecret, setTokenPassword } from "../helper/storage/localStorageHelper";
 import { SettingsInfoModal } from "../modals/SettingsInfoModal";
-import { pkceFlowServerStart } from "../oauth/pkceServerFlow";
+import { codeFlowServerStart } from "../oauth/codeServerFlow";
 import { isLoggedIn } from "../helper/storage/localStorageHelper";
 import { pkceFlowLocalStart } from "../oauth/pkceLocalFlow";
 
@@ -173,7 +173,7 @@ export class SettingsView extends PluginSettingTab {
 						if (this.plugin.settings.useCustomClient) {
 							pkceFlowLocalStart();
 						} else {
-							pkceFlowServerStart();
+							codeFlowServerStart();
 						}
 					})
 				})

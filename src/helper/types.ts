@@ -9,8 +9,7 @@ export interface PKCELocalSession {
     codeVerifier: string;
 }
 
-
-export interface PKCEServerSession {
+export interface CodeServerSession {
     keys: CryptoKeyPair;
     state: string;
 }
