@@ -2,43 +2,72 @@ import TestPlugin from "../../TestPlugin";
 import { PasswordEnterModal } from "../../modals/PasswordEnterModal";
 import { aesGcmDecrypt, aesGcmEncrypt } from "../crypt/aes";
 
+/*
+	This file contains helper functions to store plugin date into the Obsidian LocalStorage.
+	The encryption of the data is optional and can be enabled in the settings.
+	The functions in this file are handling the encryption and decryption of the data.
+*/
+
+//Definition of the keys used to store the data in the LocalStorage
 const GOOGLE_CALENDAR_PLUGIN_REFRESH_KEY = 'google_calendar_plugin_refresh_key';
 const GOOGLE_CALENDAR_PLUGIN_ACCESS_KEY = 'google_calendar_plugin_access_key';
 const GOOGLE_CALENDAR_PLUGIN_EXPIRATION_KEY = 'google_calendar_plugin_expiration_key';
 const GOOGLE_CALENDAR_PLUGIN_CLIENT_ID_KEY = 'google_calendar_plugin_client_id_key';
 const GOOGLE_CALENDAR_PLUGIN_CLIENT_SECRET_KEY = 'google_calendar_plugin_client_secret_key';
 
+// temporary password storage for encryption
 let tokenPassword = null;
+// flag to prevent multiple password modals
 let getPasswordModalIsOpen = false;
+
+/*
+	Public function to allow password to be set
+*/
 export const setTokenPassword = (password: string) => {
 	tokenPassword = password;
 }
 
+/*
+	Helper function to make sure the password is set before it is used
+*/
 async function waitForPassword() {
 	while (!tokenPassword)
 		await new Promise(resolve => setTimeout(resolve, 1000));
 }
 
+/*
+	Helper function to get the password from the user
+	The function will return the cached password if it is already set
+	If not a modal will be opened to ask the user for the password
+*/
 const getPassword = async (): Promise<string> => {
+	// Return the password if it is already set
 	if (tokenPassword) return tokenPassword;
+
+	// Open a password modal if it is not already open
 	if (!getPasswordModalIsOpen) {
 		new PasswordEnterModal(TestPlugin.getInstance().app, (enteredPassword: string) => {
+			// Callback function to set the password if modal is closed
 			setTokenPassword(enteredPassword);
 			getPasswordModalIsOpen = false;
 		}).open();
 		getPasswordModalIsOpen = true;
 	}
 
+	// wait for password to be set by the user in the modal
 	await waitForPassword()
 	return tokenPassword;
 }
 
+/*
+	Helper function used everywhere in the plugin to check if the user has authenticated the plugin
+*/
 export const isLoggedIn = (): boolean => {
 	return (window.localStorage.getItem(GOOGLE_CALENDAR_PLUGIN_REFRESH_KEY) ?? "") !== "";
 }
 
 //===================
-//GETTER
+//GETTER TODO: comments
 //===================
 
 /**

@@ -1,3 +1,6 @@
+/*
+    This file contains custom type definitions for the plugin.
+*/
 export interface TestPluginSettings {
     encryptToken: boolean,
     useCustomClient: boolean,

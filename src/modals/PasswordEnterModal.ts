@@ -1,11 +1,13 @@
-import { on } from "events";
 import { App, Modal, Setting } from "obsidian";
 
-export class PasswordEnterModal extends Modal {
+/*
+    Obsidian modal to enter a password.
+    The password will be used the encrypt sensitive data.
+*/
 
+export class PasswordEnterModal extends Modal {
     password = '';
     setPassword: (password: string) => void;
-
     constructor(app: App, setPassword: (password: string) => void) {
         super(app);
         this.setPassword = setPassword;
@@ -17,6 +19,7 @@ export class PasswordEnterModal extends Modal {
             .setName('Password')
             .setDesc('Enter your password')
             .addText(text => {
+                //Set input type to hide the password
                 text.inputEl.type = 'password';
                 text.setPlaceholder('Password')
                 text.onChange(async (value) => {

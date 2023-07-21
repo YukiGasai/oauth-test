@@ -9,9 +9,15 @@ import { getGoogleCalendars } from './api/getCalendars';
 import { aesGcmDecrypt, aesGcmEncrypt } from 'src/helper/crypt/aes';
 import { scopeTest } from 'src/helper/scopeTest';
 
+/*
+	This file contains the main class of the plugin.
+	The class is used to initialize the plugin and register the commands and protocol handler.
+*/
 export default class TestPlugin extends Plugin {
+	// Variable to store the instance of the plugin
 	private static instance: TestPlugin;
 
+	// Function to get the instance of the plugin (singleton pattern)
 	public static getInstance(): TestPlugin {
 		return TestPlugin.instance;
 	}
@@ -21,8 +27,10 @@ export default class TestPlugin extends Plugin {
 	async onload() {
 		TestPlugin.instance = this;
 
+		// Load the settings from the LocalStorage
 		await this.loadSettings();
 
+		// Most basic test command to check if the plugin loaded correctly
 		this.addCommand({
 			id: 'testplugin-sample-command',
 			name: 'TestPlugin Sample Command',
@@ -31,6 +39,7 @@ export default class TestPlugin extends Plugin {
 			}
 		});
 
+		// Test command to to log out the user
 		this.addCommand({
 			id: 'testplugin-logout',
 			name: 'TestPlugin Logout',
@@ -46,6 +55,7 @@ export default class TestPlugin extends Plugin {
 			}
 		});
 
+		// Test command to run the PKCE Local Flow
 		this.addCommand({
 			id: 'testplugin-login-pkce-local',
 			name: 'TestPlugin Login with PKCE Local Flow',
@@ -62,6 +72,7 @@ export default class TestPlugin extends Plugin {
 			}
 		});
 
+		// Test command to run the Code Server Flow
 		this.addCommand({
 			id: 'testplugin-login-code-server',
 			name: 'TestPlugin Login with Code Server Flow',
@@ -77,6 +88,7 @@ export default class TestPlugin extends Plugin {
 			}
 		});
 
+		// Test command to check the authentication by getting the google calendar events
 		this.addCommand({
 			id: 'testplugin-get-events',
 			name: 'TestPlugin Get Events',
@@ -92,6 +104,7 @@ export default class TestPlugin extends Plugin {
 			}
 		});
 
+		// Test command to check the authentication by getting the google calendar calendars
 		this.addCommand({
 			id: 'testplugin-get-calendars',
 			name: 'TestPlugin Get Calendars',
@@ -108,6 +121,7 @@ export default class TestPlugin extends Plugin {
 		});
 
 
+		// Test command to check the aes token encryption
 		this.addCommand({
 			id: 'testplugin-test-encryption',
 			name: 'TestPlugin Test Encryption',
@@ -131,6 +145,7 @@ export default class TestPlugin extends Plugin {
 			}
 		});
 
+		// Register the settings tab
 		this.settingsTab = new SettingsView(this.app, this)
 		this.addSettingTab(this.settingsTab);
 

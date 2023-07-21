@@ -1,3 +1,7 @@
+/*
+    Helper function to make sure only allowed scopes are used in the authorization process
+
+*/
 export const scopeTest = (scopesString: string): boolean => {
 
     const scopes = scopesString.split(" ");
