@@ -81,3 +81,6 @@ export async function aesGcmDecrypt(ciphertext: string, password: string) {
 	}
 
 }
+
+
+// Added password protection for the tokens
