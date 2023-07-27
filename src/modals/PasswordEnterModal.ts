@@ -7,10 +7,13 @@ import { App, Modal, Setting } from "obsidian";
 
 export class PasswordEnterModal extends Modal {
     password = '';
+    repeatPassword = '';
     setPassword: (password: string) => void;
-    constructor(app: App, setPassword: (password: string) => void) {
+    createNewPassword: boolean;
+    constructor(app: App, setPassword: (password: string) => void, createNewPassword = false) {
         super(app);
         this.setPassword = setPassword;
+        this.createNewPassword = createNewPassword;
     }
 
     onOpen() {
@@ -27,13 +30,29 @@ export class PasswordEnterModal extends Modal {
                 });
             });
 
+        if(this.createNewPassword) {
+            new Setting(contentEl)
+            .setName('Repeat Password')
+            .setDesc('Repeat your password')
+            .addText(text => {
+                //Set input type to hide the password
+                text.inputEl.type = 'password';
+                text.setPlaceholder('Repeat Password')
+                text.onChange(async (value) => {
+                    this.repeatPassword = value;
+                });
+            });
+        }
+
         new Setting(contentEl)
             .setName('Submit')
             .setDesc('Submit your password')
             .addButton(button => {
                 button.setButtonText('Submit')
                 button.onClick(async (evt) => {
-                    this.close();
+                    if(!this.createNewPassword || this.password === this.repeatPassword) {
+                        this.close();
+                    }
                 });
             });
     }

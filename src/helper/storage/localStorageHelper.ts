@@ -40,7 +40,7 @@ async function waitForPassword() {
 	The function will return the cached password if it is already set
 	If not a modal will be opened to ask the user for the password
 */
-const getPassword = async (): Promise<string> => {
+const getPassword = async (createNew = false): Promise<string> => {
 	// Return the password if it is already set
 	if (tokenPassword) return tokenPassword;
 
@@ -50,7 +50,7 @@ const getPassword = async (): Promise<string> => {
 			// Callback function to set the password if modal is closed
 			setTokenPassword(enteredPassword);
 			getPasswordModalIsOpen = false;
-		}).open();
+		}, createNew).open();
 		getPasswordModalIsOpen = true;
 	}
 
@@ -157,7 +157,7 @@ export const setAccessToken = async (googleAccessToken: string): Promise<void> =
  */
 export const setRefreshToken = async (googleRefreshToken: string): Promise<void> => {
 	if (TestPlugin.getInstance().settings.encryptToken) {
-		const password = await getPassword();
+		const password = await getPassword(true);
 		googleRefreshToken = await aesGcmEncrypt(googleRefreshToken, password);
 	}
 	window.localStorage.setItem(GOOGLE_CALENDAR_PLUGIN_REFRESH_KEY, googleRefreshToken);
